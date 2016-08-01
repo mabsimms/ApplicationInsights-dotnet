@@ -7,7 +7,7 @@
     /// <summary>
     /// Accumulates <see cref="ITelemetry"/> items for efficient transmission.
     /// </summary>
-    internal class TelemetryBuffer
+    internal class TelemetryBuffer : ITelemetryBuffer
     {
         /// <summary>
         /// Delegate that is raised when the buffer is full.

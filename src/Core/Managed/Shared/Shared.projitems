@@ -15,6 +15,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Channel\InMemoryChannel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Channel\InMemoryTransmitter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Channel\ITelemetry.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Channel\ITelemetryBuffer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Channel\ITelemetryChannel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Channel\TelemetryBuffer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Channel\Transmission.cs" />
