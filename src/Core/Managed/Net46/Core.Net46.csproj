@@ -44,8 +44,8 @@
     <Compile Include="..\Net40\Extensibility\Implementation\TelemetryConfigurationFactory.cs">
       <Link>Extensibility\Implementation\TelemetryConfigurationFactory.cs</Link>
     </Compile>
-    <Compile Include="..\Shared\Channel\PipelinedInMemoryTransmitter.cs">
-      <Link>Extensibility\Implementation\PipelinedInMemoryTransmitter.cs</Link>
+    <Compile Include="..\Shared\Channel\PipelinedInMemoryChannel.cs">
+      <Link>Extensibility\Implementation\External\PipelinedInMemoryChannel.cs</Link>
     </Compile>
     <Compile Include="Extensibility\Implementation\External\AjaxCallData.cs" />
     <Compile Include="Extensibility\Implementation\External\DataPoint.cs" />

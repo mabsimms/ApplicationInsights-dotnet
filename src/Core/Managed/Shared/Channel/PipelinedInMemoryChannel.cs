@@ -25,9 +25,13 @@ namespace Microsoft.ApplicationInsights.Channel
         private BufferBlock<ITelemetry> _buffer;
         private BatchBlock<ITelemetry> _batcher;
         private ActionBlock<IEnumerable<ITelemetry>> _publish;
+        private ActionBlock<ITelemetry> _developerPublish;
+        private ITargetBlock<ITelemetry> _entry;
+         
         private CancellationTokenSource _tokenSource;
         private IDisposable[] _disposables;
         private int _disposeCount = 0;
+        private long _droppedEventCount = 0;
 
         // Background timer to periodically flush the batch block
         private System.Threading.Timer _windowTimer;
@@ -62,7 +66,7 @@ namespace Microsoft.ApplicationInsights.Channel
                 });
 
             _publish = new ActionBlock<IEnumerable<ITelemetry>>(
-                async (e) => await Send(e),
+                async (e) => await PublishEvents(e),
                    new ExecutionDataflowBlockOptions()
                    {
                        // Maximum of one concurrent batch being published
@@ -72,6 +76,22 @@ namespace Microsoft.ApplicationInsights.Channel
                        BoundedCapacity = 3,               
                        CancellationToken = _tokenSource.Token
                    });
+
+            _developerPublish = new ActionBlock<ITelemetry>(
+                async (e) => await PublishEvents(new ITelemetry[] { e }),
+                   new ExecutionDataflowBlockOptions()
+                   {
+                       // Maximum of one concurrent batch being published
+                       MaxDegreeOfParallelism = 1,
+
+                       // Maximum of three pending batches to be published
+                       BoundedCapacity = 32,
+                       CancellationToken = _tokenSource.Token
+                   });
+
+            // Start with the default entrypoint being the non-developer
+            // pipeline
+            _entry = _buffer;
 
             _disposables = new IDisposable[]
             {
@@ -92,14 +112,10 @@ namespace Microsoft.ApplicationInsights.Channel
                 {
                     // Enable developer mode
                     if (value.HasValue && value.Value)
-                    {
-                        
-                    }
+                        _entry = _developerPublish;
                     // Disable developer mode
                     else
-                    {
-                        
-                    }
+                        _entry = _buffer;
                 }
             }
         }
@@ -108,9 +124,10 @@ namespace Microsoft.ApplicationInsights.Channel
         {
             try
             {
-                if (!_buffer.Post(item))
+                if (!_entry.Post(item))
                 {
-                    // TODO; immediate flush?
+                    // Silently drop events if the pipeline has backed up
+                    Interlocked.Increment(ref _droppedEventCount);
                 }                
             }
             catch (Exception e)
@@ -156,31 +173,29 @@ namespace Microsoft.ApplicationInsights.Channel
         }
 
         /// <summary>
-        /// Happens when the in-memory buffer is full. Flushes the in-memory buffer 
-        /// and sends the telemetry items.
-        /// </summary>
-        private void OnBufferFull()
-        {
-            _batcher?.TriggerBatch();
-        }
-
-        /// <summary>
         /// Serializes a list of telemetry items and sends them.
         /// </summary>
-        private async Task Send(IEnumerable<ITelemetry> telemetryItems)
+        private async Task PublishEvents(IEnumerable<ITelemetry> telemetryItems)
         {
-            if (telemetryItems == null || !telemetryItems.Any())
+            try
             {
-                CoreEventSource.Log.LogVerbose("No Telemetry Items passed to Enqueue");
-                return;
+                if (telemetryItems == null || !telemetryItems.Any())
+                {
+                    CoreEventSource.Log.LogVerbose("No Telemetry Items passed to Enqueue");
+                    return;
+                }
+
+                byte[] data = JsonSerializer.Serialize(telemetryItems);
+                var transmission = new Transmission(this._endpointAddress,
+                    data, "application/x-json-stream",
+                    JsonSerializer.CompressionType);
+
+                await transmission.SendAsync().ConfigureAwait(false);
             }
-
-            byte[] data = JsonSerializer.Serialize(telemetryItems);
-            var transmission = new Transmission(this._endpointAddress, 
-                data, "application/x-json-stream", 
-                JsonSerializer.CompressionType);
-
-            await transmission.SendAsync().ConfigureAwait(false);
+            catch (Exception ex)
+            {
+                CoreEventSource.Log.LogVerbose("PipelinedInMemoryTransmitter.Publish failed: ", ex.ToString());
+            }
         }
 
         private void Dispose(bool disposing)

@@ -43,8 +43,8 @@
     <Compile Include="..\Net40\Extensibility\Implementation\TelemetryConfigurationFactory.cs">
       <Link>Extensibility\Implementation\TelemetryConfigurationFactory.cs</Link>
     </Compile>
-    <Compile Include="..\Shared\Channel\PipelinedInMemoryTransmitter.cs">
-      <Link>Extensibility\Implementation\PipelinedInMemoryTransmitter.cs</Link>
+    <Compile Include="..\Shared\Channel\PipelinedInMemoryChannel.cs">
+      <Link>Extensibility\Implementation\PipelinedInMemoryChannel.cs</Link>
     </Compile>
   </ItemGroup>
   <Import Project="..\Shared\Shared.projitems" Label="Shared" />
